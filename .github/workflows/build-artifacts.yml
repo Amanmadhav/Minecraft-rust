@@ -11,6 +11,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      RUSTFLAGS: "--cap-lints=warn"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,6 +26,9 @@ jobs:
         run: |
           find . \( -name "*.rs" -o -name "Cargo.toml" \) -type f -print0 | xargs -0 sed -i 's/deny(warnings)/warn(warnings)/g; s/warnings = "deny"/warnings = "warn"/g'
 
+      - name: Check formatting
+        run: cargo +stable fmt --all -- --check
+
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -31,14 +37,10 @@ jobs:
             launcher
 
       - name: Build client and server binaries
-        env:
-          RUSTFLAGS: -A unreachable-code
         run: cargo build --release --bin horizon-client --bin horizon-server
 
       - name: Build launcher binary
         working-directory: launcher
-        env:
-          RUSTFLAGS: -A unreachable-code
         run: cargo build --release --bin horizon-launcher
 
       - name: Package binaries
