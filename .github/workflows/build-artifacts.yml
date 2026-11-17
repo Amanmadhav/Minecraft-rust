@@ -42,15 +42,18 @@ jobs:
             launcher
 
       - name: Build client and server binaries
-        env:
-          RUSTFLAGS: "--cap-lints warn"
-        run: cargo build --release --bin horizon-client --bin horizon-server
+        run: >
+          cargo build --release
+          --config 'workspace.lints.rust.warnings="warn"'
+          --bin horizon-client
+          --bin horizon-server
 
       - name: Build launcher binary
         working-directory: launcher
-        env:
-          RUSTFLAGS: "--cap-lints warn"
-        run: cargo build --release --bin horizon-launcher
+        run: >
+          cargo build --release
+          --config 'lints.rust.warnings="warn"'
+          --bin horizon-launcher
 
       - name: Package binaries
         shell: bash
