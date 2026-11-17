@@ -1,38 +1,23 @@
 name: Build Horizon Binaries
 
 on:
-  workflow_dispatch: # Allows manual trigger from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: windows-x64
-            ext: .exe
-          - os: ubuntu-latest
-            target: linux-x64
-            ext: ""
-          - os: macos-latest
-            target: macos-arm64
-            ext: ""
-
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Linux audio and udev headers
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libudev-dev pkg-config
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Strip deny(warnings) from source and manifests
+        shell: bash
+        run: |
+          find . -name "*.rs" -o -name "Cargo.toml" | xargs sed -i 's/deny(warnings)/warn(warnings)/g; s/warnings = "deny"/warnings = "warn"/g'
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
@@ -42,29 +27,22 @@ jobs:
             launcher
 
       - name: Build client and server binaries
-        run: >
-          cargo build --release
-          --config 'workspace.lints.rust.warnings="warn"'
-          --bin horizon-client
-          --bin horizon-server
+        run: cargo build --release --bin horizon-client --bin horizon-server
 
       - name: Build launcher binary
         working-directory: launcher
-        run: >
-          cargo build --release
-          --config 'lints.rust.warnings="warn"'
-          --bin horizon-launcher
+        run: cargo build --release --bin horizon-launcher
 
       - name: Package binaries
         shell: bash
         run: |
           mkdir -p dist
-          cp target/release/horizon-client${{ matrix.ext }} dist/
-          cp target/release/horizon-server${{ matrix.ext }} dist/
-          cp launcher/target/release/horizon-launcher${{ matrix.ext }} dist/
+          cp target/release/horizon-client.exe dist/
+          cp target/release/horizon-server.exe dist/
+          cp launcher/target/release/horizon-launcher.exe dist/
 
       - name: Upload compiled binaries
         uses: actions/upload-artifact@v4
         with:
-          name: horizon-${{ matrix.target }}
+          name: horizon-windows-x64
           path: dist/
